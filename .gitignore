@@ -169,3 +169,11 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+.vscode/
+
+*.out
+.python-version
+
+
+.python-version
+.venv
