@@ -1,9 +1,10 @@
 import logging
-from typing import Optional
+import os
+from typing import List, Optional
 
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.conversational_retrieval.base import (
-    ConversationalRetrievalChain,
+    BaseConversationalRetrievalChain,
 )
 from langchain.chains.history_aware_retriever import (
     create_history_aware_retriever,
@@ -25,7 +26,7 @@ class RAGSystem:
     ):
         self.top_k_documents = top_k_documents
         self.llm = self._get_llm()
-        self.chain: Optional[ConversationalRetrievalChain] = None
+        self.chain: Optional[BaseConversationalRetrievalChain] = None
         self.vector_store_management = VectorStoreManager(
             docs_dir, persist_directory_dir, batch_size
         )
@@ -35,9 +36,13 @@ class RAGSystem:
     ):
         return get_llm_model_chat(temperature=0.1, max_tokens=1000)
 
-    def initialize_vector_store(self):
+    def load_documents(self) -> List:
+        """Load and split documents from the specified directory"""
+        return self.vector_store_management.load_documents()
+
+    def initialize_vector_store(self, documents: List = None):
         """Initialize or load the vector store"""
-        self.vector_store_management.initialize_vector_store()
+        self.vector_store_management.initialize_vector_store(documents)
 
     def setup_rag_chain(self):
         if self.chain is not None:
@@ -59,7 +64,7 @@ class RAGSystem:
 
     def query(self, question: str, history: list = []):
         """Query the RAG system"""
-        if not self.vector_store_management.vector_store:
+        if not self.vector_store_management.vs_initialized:
             self.initialize_vector_store()
 
         self.setup_rag_chain()
@@ -67,3 +72,23 @@ class RAGSystem:
         for token in self.chain.stream({"input": question, "chat_history": history}):
             if "answer" in token:
                 yield token["answer"]
+
+
+if __name__ == "__main__":
+    from glob import glob
+
+    docs_dir = "data/docs"
+    persist_directory_dir = "data/chroma_db"
+    batch_size = 64
+
+    # Initialize RAG system
+    rag = RAGSystem(docs_dir, persist_directory_dir, batch_size)
+
+    if len(glob(os.path.join(persist_directory_dir, "*/*.bin"))):
+        rag.initialize_vector_store()  # vector store initialized
+    else:
+        # Load and index documents
+        documents = rag.load_documents()
+        rag.initialize_vector_store(documents)  # documents
+
+    print(rag.query("Quand a eu lieu la traite négrière ?"))
