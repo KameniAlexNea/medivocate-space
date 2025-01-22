@@ -38,7 +38,7 @@ class ChatInterface:
 
 # Usage example:
 if __name__ == "__main__":
-    top_k_docs = int(os.getenv("N_CONTEXT") or 8)
+    top_k_docs = int(os.getenv("N_CONTEXT") or 4)
     rag_system = RAGSystem(top_k_documents=top_k_docs)
     rag_system.initialize_vector_store()
 
